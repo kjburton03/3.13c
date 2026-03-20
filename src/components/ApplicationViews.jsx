@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { BrowserRouter, Route, Routes } from "react-router-dom"
 import { Authorized } from "./Authorized"
 import { Login } from "../pages/Login.jsx"
@@ -17,17 +17,44 @@ export const ApplicationViews = () => {
             label: "Volcanic"
         }
     }])
+    const [typesState, setTypesState] = useState([])
 
-    const fetchRocksFromAPI = async () => {
-        const response = await fetch("http://localhost:8000/rocks",
-            {
-                headers: {
-                    Authorization: `Token ${JSON.parse(localStorage.getItem("rock_token")).token}`
-                }
-            })
-        const rocks = await response.json()
-        setRocksState(rocks)
+    const authHeaders = {
+        Authorization: `Token ${JSON.parse(localStorage.getItem("rock_token")).token}`
     }
+
+    const fetchTypes = async () => {
+        const response = await fetch("http://localhost:8000/types", {
+            headers: authHeaders
+        })
+        const types = await response.json()
+        setTypesState(types)
+
+        return types
+    }
+
+    const fetchRocksFromAPI = async (types = typesState) => {
+        const response = await fetch("http://localhost:8000/rocks", {
+            headers: authHeaders
+        })
+        const rocks = await response.json()
+
+        const rocksWithTypes = rocks.map(rock => ({
+            ...rock,
+            type: types.find(t => t.id === rock.type_id)
+        }))
+
+        setRocksState(rocksWithTypes)
+    }
+
+    useEffect(() => {
+        const loadData = async () => {
+            const types = await fetchTypes()
+            await fetchRocksFromAPI(types)
+        }
+
+        loadData()
+    }, [])
 
     return <BrowserRouter>
         <Routes>
